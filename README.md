@@ -65,9 +65,8 @@ The same `proposal.zip` also works for importing into
 
 ### Option 3: Compile locally
 
-Install a XeLaTeX-capable TeX distribution plus Biber, then use
-`latexmk` (already configured for XeLaTeX + Biber via `.latexmkrc`, no
-extra flags needed).
+Install a XeLaTeX-capable TeX distribution, then use `latexmk` (already
+configured for XeLaTeX + BibTeX via `.latexmkrc`, no extra flags needed).
 
 **macOS:**
 ```bash
@@ -86,12 +85,12 @@ on demand.
 **Linux (Debian/Ubuntu):**
 ```bash
 sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-extra \
-  texlive-lang-cyrillic texlive-bibtex-extra biber latexmk
+  texlive-lang-cyrillic texlive-bibtex-extra latexmk
 ```
 
 Commands to know, once installed:
 ```bash
-latexmk main.tex   # compile (XeLaTeX + Biber)
+latexmk main.tex   # compile (XeLaTeX + BibTeX)
 latexmk -c         # remove build artifacts, keep the PDF
 latexmk -C         # remove build artifacts AND the PDF -- do a full clean
                     # rebuild with this if something looks stale/broken,
@@ -115,6 +114,9 @@ doesn't apply.
 
 **Do edit**: only the text and metadata in `main.tex` (title, team,
 mentor, track, repository, date, section content) and `references.bib`.
+
+Nothing is validated: the percentages don't have to add up to 100, and you
+can leave them out entirely.
 
 ## Changing the language
 
@@ -148,10 +150,9 @@ are added to `assets/logo/`.
 ## Scope
 
 Title page (1) + main text (1–2) + list of references (no limit) =
-3 pages of core material maximum. If the main text exceeds 2 pages,
-compilation **does not fail**, but the log will show a warning:
-`WARNING: Основний текст перевищує 2 сторінки`. Trim the text until the
-warning disappears.
+3 pages of core material maximum. The template does **not** check this for
+you — keep an eye on the page count yourself and trim the main text if it
+runs past two pages.
 
 ## Fonts
 

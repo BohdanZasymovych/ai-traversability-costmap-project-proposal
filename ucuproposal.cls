@@ -25,7 +25,11 @@
 \ExecuteOptions{ukrainian}
 \ProcessOptions\relax
 
-\LoadClass[10.5pt,a4paper]{article}
+%% article підтримує лише 10/11/12pt. Раніше тут стояло 10.5pt — article мовчки
+%% його ігнорував і вантажив size10.clo, тобто текст УЖЕ був 10pt, а в лозі
+%% висіло "Unused global option(s): [10.5pt]". Прибрано, щоб опція збігалася
+%% з реальністю; на вигляд документа це не впливає.
+\LoadClass[10pt,a4paper]{article}
 
 %% ------------------------------------------------------------------
 %% Базові пакети
@@ -46,17 +50,18 @@
 
 \RequirePackage{xcolor}
 \RequirePackage{graphicx}
-\RequirePackage{microtype}
 \RequirePackage{titlesec}
 \RequirePackage{enumitem}
 \RequirePackage{booktabs}
 \RequirePackage{array}
-\RequirePackage{mdframed}
 \RequirePackage{fancyhdr}
-\RequirePackage{lastpage}
-\RequirePackage{refcount}
-\RequirePackage[backend=biber,style=numeric-comp,sorting=none]{biblatex}
-\addbibresource{references.bib}
+%% Бібліографія — класичний BibTeX, а НЕ biblatex+biber. biblatex тягне за
+%% собою окремий процес biber і два додаткові проходи XeLaTeX (через
+%% .bcf/.run.xml) — це була найдорожча частина збірки, дорожча за весь
+%% решту документа разом. Робочий процес для студента не змінюється:
+%% той самий references.bib і ті самі \cite{}.
+%% cite — коректне групування посилань: \cite{a,b,c} → [1--3].
+\RequirePackage{cite}
 
 %% ------------------------------------------------------------------
 %% Фірмовий колір УКУ (єдиний акцентний колір шаблону)
@@ -69,18 +74,46 @@
 
 %% ------------------------------------------------------------------
 %% Шрифти: Charis SIL (текст) + Fira Sans (заголовки/титулка) + Fira Mono
-%% Якщо гарнітура недоступна — явне попередження в лозі й безшумний fallback
-%% на DejaVu, щоб компіляція ніколи не падала через шрифт.
+%%
+%% ВАЖЛИВО ДЛЯ ШВИДКОСТІ: гарнітури вантажаться за ІМЕНЕМ ФАЙЛУ, а не за
+%% назвою гарнітури. Пошук за назвою ("Charis SIL") віддається fontconfig і
+%% на Overleaf коштує секунди на кожну гарнітуру; пошук за іменем файлу йде
+%% через kpathsea в дереві TeX Live і фактично безкоштовний.
+%% Перевірки наявності теж зроблені по файлу — резервний DejaVu лишається,
+%% тож компіляція ніколи не падає через відсутній шрифт.
 %% ------------------------------------------------------------------
 \newtoggle{ucu@mainfontsc}
 \togglefalse{ucu@mainfontsc}
 
-\IfFontExistsTF{Charis SIL}{%
-  \setmainfont{Charis SIL}%
+\IfFontExistsTF{CharisSIL-Regular.ttf}{%
+  \setmainfont{CharisSIL}[%
+    Extension      = .ttf,
+    UprightFont    = *-Regular,
+    BoldFont       = *-Bold,
+    ItalicFont     = *-Italic,
+    BoldItalicFont = *-BoldItalic,
+  ]%
+  %% Капітельний варіант визначаємо ОДИН раз окремою гарнітурою замість
+  %% \addfontfeature на кожному використанні — інакше XeLaTeX створює новий
+  %% інстанс шрифту в кожному місці титулки.
+  \newfontfamily\ucu@scfont{CharisSIL}[%
+    Extension   = .ttf,
+    UprightFont = *-Regular,
+    BoldFont    = *-Bold,
+    Letters     = SmallCaps,
+  ]%
   \toggletrue{ucu@mainfontsc}%
 }{%
   \ClassWarningNoLine{ucuproposal}{Шрифт 'Charis SIL' не знайдено. Використано резервний DejaVu Serif. Встановіть пакет TeX Live 'charissil' для коректного брендингу}%
-  \IfFontExistsTF{DejaVu Serif}{\setmainfont{DejaVu Serif}}{%
+  \IfFontExistsTF{DejaVuSerif.ttf}{%
+    \setmainfont{DejaVuSerif}[%
+      Extension      = .ttf,
+      UprightFont    = *,
+      BoldFont       = *-Bold,
+      ItalicFont     = *-Italic,
+      BoldItalicFont = *-BoldItalic,
+    ]%
+  }{%
     \ClassWarningNoLine{ucuproposal}{Резервний шрифт 'DejaVu Serif' також не знайдено. Використано типовий шрифт LaTeX}%
   }%
 }
@@ -88,32 +121,54 @@
 %% Малі капітелі для титулки: справжня OpenType-функція Charis SIL,
 %% або класичний \scshape як безпечний резерв для інших шрифтів.
 \newcommand{\ucu@sc}[1]{%
-  \iftoggle{ucu@mainfontsc}{{\addfontfeature{Letters=SmallCaps}#1}}{{\scshape#1}}%
+  \iftoggle{ucu@mainfontsc}{{\ucu@scfont#1}}{{\scshape#1}}%
 }
 
-\IfFontExistsTF{Fira Sans}{%
-  \setsansfont{Fira Sans}%
+\IfFontExistsTF{FiraSans-Regular.otf}{%
+  \setsansfont{FiraSans}[%
+    Extension      = .otf,
+    UprightFont    = *-Regular,
+    BoldFont       = *-Bold,
+    ItalicFont     = *-Italic,
+    BoldItalicFont = *-BoldItalic,
+  ]%
+  % Накреслення заголовків: у брендбуці — Fira Sans SemiBold.
+  \newfontfamily\ucuheadfont{FiraSans}[%
+    Extension   = .otf,
+    UprightFont = *-SemiBold,
+    ItalicFont  = *-SemiBoldItalic,
+  ]%
 }{%
   \ClassWarningNoLine{ucuproposal}{Шрифт 'Fira Sans' не знайдено. Використано резервний DejaVu Sans. Встановіть пакет TeX Live 'fira' для коректного брендингу}%
-  \IfFontExistsTF{DejaVu Sans}{\setsansfont{DejaVu Sans}}{%
+  \IfFontExistsTF{DejaVuSans.ttf}{%
+    \setsansfont{DejaVuSans}[%
+      Extension      = .ttf,
+      UprightFont    = *,
+      BoldFont       = *-Bold,
+      ItalicFont     = *-Oblique,
+      BoldItalicFont = *-BoldOblique,
+    ]%
+  }{%
     \ClassWarningNoLine{ucuproposal}{Резервний шрифт 'DejaVu Sans' також не знайдено. Використано типовий шрифт LaTeX}%
   }%
+  \newcommand{\ucuheadfont}{\sffamily\bfseries}%
 }
 
-\IfFontExistsTF{Fira Mono}{%
-  \setmonofont{Fira Mono}%
+\IfFontExistsTF{FiraMono-Regular.otf}{%
+  \setmonofont{FiraMono}[%
+    Extension   = .otf,
+    UprightFont = *-Regular,
+    BoldFont    = *-Bold,
+  ]%
 }{%
   \ClassWarningNoLine{ucuproposal}{Шрифт 'Fira Mono' не знайдено. Використано резервний DejaVu Sans Mono}%
-  \IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}}{}%
-}
-
-% Накреслення заголовків: у брендбуці — Fira Sans SemiBold.
-% Якщо SemiBold недоступний окремою гарнітурою — резерв на Fira Sans Bold.
-\IfFontExistsTF{Fira Sans SemiBold}{%
-  \newfontfamily\ucuheadfont{Fira Sans SemiBold}%
-}{%
-  \ClassWarningNoLine{ucuproposal}{Накреслення 'Fira Sans SemiBold' не знайдено. Заголовки набрано Fira Sans Bold}%
-  \newcommand{\ucuheadfont}{\sffamily\bfseries}%
+  \IfFontExistsTF{DejaVuSansMono.ttf}{%
+    \setmonofont{DejaVuSansMono}[%
+      Extension   = .ttf,
+      UprightFont = *,
+      BoldFont    = *-Bold,
+    ]%
+  }{}%
 }
 
 \setlength{\parindent}{0pt}
@@ -130,7 +185,6 @@
   \newcommand{\ucu@labelrepo}{Repository}
   \newcommand{\ucu@labeldate}{Submission date}
   \newcommand{\ucu@pagelabel}{page}
-  \newcommand{\ucu@oflabel}{of}
   \newcommand{\ucu@superheader}{AI Course \textperiodcentered\ Semester Project Proposal \textperiodcentered\ 2026}
   \newcommand{\ucu@uniname}{Ukrainian Catholic University}
   \newcommand{\ucu@submittedline}{Project proposal submitted for the}
@@ -144,7 +198,6 @@
   \newcommand{\ucu@labelrepo}{Репозиторій}
   \newcommand{\ucu@labeldate}{Дата подачі}
   \newcommand{\ucu@pagelabel}{сторінка}
-  \newcommand{\ucu@oflabel}{з}
   \newcommand{\ucu@superheader}{Курс «Штучний інтелект» \textperiodcentered\ Семестровий проєкт \textperiodcentered\ 2026}
   \newcommand{\ucu@uniname}{Український Католицький Університет}
   \newcommand{\ucu@submittedline}{Пропозиція проєкту, подана в межах курсу}
@@ -187,27 +240,40 @@
 \setlist[enumerate]{nosep,leftmargin=1.4em}
 
 %% ------------------------------------------------------------------
-%% Блок "keyfacts" — врізка з ключовими цифрами/метриками
+%% Блок "keyfacts" — врізка з ключовими цифрами/метриками.
+%% Реалізовано на голому боксі замість mdframed: врізка ніколи не розривається
+%% між сторінками, тому вся машинерія mdframed тут була зайвою.
 %% ------------------------------------------------------------------
-\newmdenv[
-  topline=false,bottomline=false,rightline=false,leftline=true,
-  linecolor=ucured,
-  linewidth=2pt,
-  innerleftmargin=10pt,innerrightmargin=10pt,
-  innertopmargin=6pt,innerbottommargin=6pt,
-  skipabove=8pt,skipbelow=8pt,
-  backgroundcolor=white
-]{keyfacts}
+\newsavebox{\ucu@kfbox}
+\newenvironment{keyfacts}{%
+  \par\addvspace{8pt}%
+  \begin{lrbox}{\ucu@kfbox}%
+  \begin{minipage}{\dimexpr\linewidth-12pt\relax}%
+  \setlength{\parskip}{0.4em}%
+}{%
+  \end{minipage}%
+  \end{lrbox}%
+  \noindent
+  %% Лінійка виступає на 6pt над і під вмістом — той самий внутрішній
+  %% відступ, що давав mdframed (innertopmargin/innerbottommargin).
+  {\color{ucured}\rule[-\dimexpr\dp\ucu@kfbox+6pt\relax]{2pt}%
+    {\dimexpr\ht\ucu@kfbox+\dp\ucu@kfbox+12pt\relax}}%
+  \hspace{10pt}\usebox{\ucu@kfbox}%
+  \par\addvspace{8pt}%
+}
 
 %% ------------------------------------------------------------------
 %% hyperref (завантажується майже останнім)
+%% bookmarks=false + pdfpagelabels=false навмисно: і закладки, і мітки
+%% сторінок (через \setcounter{page}{1} після титулки) змушували hyperref
+%% просити "Rerun", тобто цілий зайвий прохід XeLaTeX на кожній збірці.
+%% Для тристорінкового пропоузалу панель закладок того не варта.
 %% ------------------------------------------------------------------
-\RequirePackage{hyperref}
+\RequirePackage[bookmarks=false,pdfpagelabels=false]{hyperref}
 \hypersetup{
   colorlinks=true,
   allcolors=ucured,
   breaklinks=true,
-  bookmarksnumbered=true,
 }
 \iftoggle{ucu@english}{\hypersetup{pdflang=en}}{\hypersetup{pdflang=uk}}
 \urlstyle{same}
@@ -246,9 +312,6 @@
   \else
     \g@addto@macro\ucu@authorlist{, #2}%
   \fi
-  \ifnum\value{ucu@nmembers}>3
-    \ClassWarningNoLine{ucuproposal}{У команді більше 3 учасників (\the\value{ucu@nmembers}). Методичка рекомендує 2--3 особи}%
-  \fi
 }
 
 \newcommand{\mentor}[1]{\def\ucu@mentor{#1}}
@@ -268,27 +331,6 @@
 }
 
 %% ------------------------------------------------------------------
-%% Валідація обов'язкових полів — людські повідомлення українською
-%% ------------------------------------------------------------------
-\newcommand{\ucu@checkrequired}{%
-  \ifdefvoid{\ucu@title}{%
-    \ClassError{ucuproposal}{Не задано назву проєкту. Додайте команду \string\projecttitle\space з назвою проєкту в аргументі у преамбулі main.tex}%
-      {Додайте команду \string\projecttitle\space з назвою вашого проєкту в аргументі у преамбулі файлу main.tex, до початку документа.}%
-  }{}%
-  \ifnum\value{ucu@nmembers}=0
-    \ClassError{ucuproposal}{Не вказано жодного учасника команди. Додайте щонайменше одну команду \string\teammember\space з ПІБ та роллю у преамбулі main.tex}%
-      {Додайте щонайменше одну команду \string\teammember\space з ПІБ та роллю учасника у преамбулі файлу main.tex.}%
-  \fi
-  \ifdefvoid{\ucu@track}{}{%
-    \ifdefstring{\ucu@track}{research}{}{%
-      \ifdefstring{\ucu@track}{engineering}{}{%
-        \ClassWarningNoLine{ucuproposal}{Невідоме значення \string\track: "\ucu@track". Очікується "research" або "engineering"}%
-      }%
-    }%
-  }%
-}
-
-%% ------------------------------------------------------------------
 %% Титульна сторінка
 %% ------------------------------------------------------------------
 \fancypagestyle{ucutitle}{%
@@ -303,11 +345,12 @@
   \renewcommand{\headrule}{{\color{ucured}\hrule width\headwidth height\headrulewidth}}
   \renewcommand{\footrulewidth}{0pt}
   \fancyhead[L]{\sffamily\small\color{ucured}\ucu@courseline}%
-  \fancyhead[R]{\sffamily\small\color{ucured}\ucu@pagelabel\ \thepage\ \ucu@oflabel\ \pageref{LastPage}}%
+  %% Без "з N": lastpage/\pageref{LastPage} змушували latexmk робити
+  %% зайвий прохід XeLaTeX на кожній збірці.
+  \fancyhead[R]{\sffamily\small\color{ucured}\ucu@pagelabel\ \thepage}%
 }
 
 \newcommand{\maketitlepage}{%
-  \ucu@checkrequired
   \thispagestyle{ucutitle}
   \begin{center}
   %% Явні \vspace керують усім вертикальним ритмом титулки; \parskip з
@@ -366,49 +409,40 @@
 }
 
 %% ------------------------------------------------------------------
-%% Список джерел + перевірка обсягу основного тексту
-%% Студент викликає \ucuprintbibliography замість \printbibliography —
-%% це автоматично фіксує, на якій сторінці закінчився основний текст.
+%% Список джерел.
+%% Стиль unsrturl (пакет urlbst): нумерація за порядком цитування, як було
+%% в biblatex numeric-comp, і — на відміну від звичайного unsrt — друкує
+%% поле url клікабельним посиланням.
 %% ------------------------------------------------------------------
 \newcommand{\ucuprintbibliography}{%
-  \label{UCU@mainend}%
   \clearpage
-  \printbibliography[title=\ucu@biblabel]%
-}
-
-\AtEndDocument{%
-  \ifcsname r@UCU@mainend\endcsname
-    \ClassInfo{ucuproposal}{Кількість сторінок основного тексту: \getpagerefnumber{UCU@mainend}}%
-    \ifnum\getpagerefnumber{UCU@mainend}>2
-      \ClassWarningNoLine{ucuproposal}{WARNING: Основний текст перевищує 2 сторінки (зараз \getpagerefnumber{UCU@mainend}). Скоротіть текст}%
-    \fi
-  \else
-    \ClassWarningNoLine{ucuproposal}{Не вдалося визначити обсяг основного тексту: викличте \string\ucuprintbibliography\space замість \string\printbibliography}%
-  \fi
+  \renewcommand{\refname}{\ucu@biblabel}%
+  \bibliographystyle{unsrturl}%
+  \bibliography{references}%
 }
 
 %% ------------------------------------------------------------------
 %% Contribution statement
+%% Відсотки НЕ обов'язкові й ніде не перевіряються — пишіть внесок словами
+%% або додайте частку в необов'язковому аргументі, якщо так зручніше.
 %% ------------------------------------------------------------------
-\newcount\ucu@sumpercent
-\def\ucu@stripPercent#1\%{#1}
-
 %% Використовується під \section{Contribution statement} у main.tex —
 %% власного заголовка не друкує, щоб уникнути дублювання з \section.
 \newenvironment{contributions}{%
-  \ucu@sumpercent=0
   \par\addvspace{0.4em}
   \begin{itemize}
 }{%
   \end{itemize}
-  \ifnum\ucu@sumpercent=100\else
-    \ClassWarningNoLine{ucuproposal}{Сума відсотків у contributions дорівнює \the\ucu@sumpercent, а має дорівнювати 100. Перевірте розподіл}%
-  \fi
 }
 
-\newcommand{\contribution}[3]{%
-  \item \textbf{#1} --- #2: #3%
-  \global\advance\ucu@sumpercent by \ucu@stripPercent#2\relax
+%% \contribution{Ім'я}{що робить}  або  \contribution[50\%]{Ім'я}{що робить}
+\newcommand{\contribution}[3][]{%
+  \def\ucu@ctmp{#1}%
+  \ifx\ucu@ctmp\@empty
+    \item \textbf{#2} --- #3%
+  \else
+    \item \textbf{#2} --- #1: #3%
+  \fi
 }
 
 \endinput
